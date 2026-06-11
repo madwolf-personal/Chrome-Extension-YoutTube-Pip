@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Floating Player",
+  "version": "1.0",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_title": "Toggle YT Floating Player"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "*://*.youtube.com/*"
+  ]
+}
