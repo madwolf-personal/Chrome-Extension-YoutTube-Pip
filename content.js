@@ -25,6 +25,55 @@
 
     window.__YT_PIP_WINDOW__ = pipWindow;
 
+    // --- Custom Title Overlay ---
+    const titleOverlay = document.createElement("div");
+    titleOverlay.style.position = "absolute";
+    titleOverlay.style.top = "0";
+    titleOverlay.style.left = "0";
+    titleOverlay.style.width = "100%";
+    titleOverlay.style.padding = "15px 20px";
+    titleOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    titleOverlay.style.color = "white";
+    titleOverlay.style.fontFamily = '"YouTube Noto", Roboto, Arial, sans-serif';
+    titleOverlay.style.fontSize = "14px";
+    titleOverlay.style.fontWeight = "500";
+    titleOverlay.style.zIndex = "9999";
+    titleOverlay.style.pointerEvents = "none";
+    titleOverlay.style.whiteSpace = "nowrap";
+    titleOverlay.style.overflow = "hidden";
+    titleOverlay.style.textOverflow = "ellipsis";
+    titleOverlay.style.boxSizing = "border-box";
+    titleOverlay.style.transition = "opacity 0.3s ease-in-out";
+    
+    // Start completely hidden
+    titleOverlay.style.opacity = "0"; 
+
+    // --- Idle Timer Logic ---
+    let idleTimer;
+
+    const showTitleAndStartTimer = () => {
+      titleOverlay.style.opacity = "1"; 
+      
+      clearTimeout(idleTimer); 
+      
+      idleTimer = setTimeout(() => {
+        titleOverlay.style.opacity = "0";
+      }, 3000); 
+    };
+    // ------------------------
+
+    // Function to update title
+    const updateTitle = () => {
+      titleOverlay.innerText = document.title.replace(" - YouTube", "");
+      showTitleAndStartTimer(); // Triggers the 3-second fade when video changes
+    };
+
+    const titleObserver = new MutationObserver(updateTitle);
+    const titleElement = document.querySelector('title');
+    if (titleElement) {
+      titleObserver.observe(titleElement, { childList: true });
+    }
+
     [...document.styleSheets].forEach((styleSheet) => {
       try {
         const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
@@ -42,8 +91,21 @@
     pipWindow.document.body.style.margin = "0";
     pipWindow.document.body.style.overflow = "hidden";
     pipWindow.document.body.style.backgroundColor = "black";
+    pipWindow.document.body.style.position = "relative"; 
 
     pipWindow.document.body.appendChild(player);
+    pipWindow.document.body.appendChild(titleOverlay); 
+
+    updateTitle(); // Initial title setup
+
+    // Trigger whenever the mouse moves inside the window
+    pipWindow.document.body.addEventListener("mousemove", showTitleAndStartTimer);
+
+    // Hide immediately if the cursor leaves the window entirely
+    pipWindow.document.body.addEventListener("mouseleave", () => {
+      clearTimeout(idleTimer);
+      titleOverlay.style.opacity = "0";
+    });
 
     player.style.width = "100vw";
     player.style.height = "100vh";
@@ -59,10 +121,13 @@
       document.dispatchEvent(new MouseEvent(e.type, e));
     };
     pipWindow.document.addEventListener("mousedown", forwardMouseEvent);
-    pipWindow.document.addEventListener("mousemove", forwardMouseEvent);
+    pipWindow.document.addEventListener("mousemove", forwardMouseEvent); 
     pipWindow.document.addEventListener("mouseup", forwardMouseEvent);
 
     pipWindow.addEventListener("pagehide", () => {
+      titleObserver.disconnect(); 
+      clearTimeout(idleTimer); 
+
       originalParent.appendChild(player);
       player.style.width = "100%";
       player.style.height = "100%";
