@@ -9,6 +9,14 @@
     return;
   }
 
+  // --- GATEKEEPER CHECK ---
+  // Ensure we are actually on a video page before grabbing the player
+  if (!window.location.pathname.includes("/watch") && !window.location.pathname.includes("/shorts")) {
+    console.log("Not on a video page. PiP aborted.");
+    return; // Stops the script completely
+  }
+  // ----------------------------
+
   const player = document.querySelector(".html5-video-player");
   if (!player) {
     alert("YouTube player not found");
@@ -16,6 +24,9 @@
   }
 
   const originalParent = player.parentElement;
+
+  // Attempt to open the PiP window and move the player. 
+  // Catch and log any browser security or permission errors if the request fails.
 
   try {
     const pipWindow = await window.documentPictureInPicture.requestWindow({
@@ -124,10 +135,25 @@
     pipWindow.document.addEventListener("mousemove", forwardMouseEvent); 
     pipWindow.document.addEventListener("mouseup", forwardMouseEvent);
 
+    // --- Navigation & Cleanup Logic ---
+
+    // 1. Define the function to close the PiP window
+    const onNavigate = () => {
+      pipWindow.close(); // Closing the window automatically triggers the 'pagehide' event below
+    };
+
+    // 2. Listen for YouTube's internal navigation event
+    window.addEventListener("yt-navigate-start", onNavigate);
+
+    // 3. The master cleanup event (triggers when PiP is closed manually OR via navigation)
     pipWindow.addEventListener("pagehide", () => {
+      // Remove the navigation listener so it doesn't stack up
+      window.removeEventListener("yt-navigate-start", onNavigate);
+      
       titleObserver.disconnect(); 
       clearTimeout(idleTimer); 
 
+      // Safely put the player back before YouTube destroys the original parent
       originalParent.appendChild(player);
       player.style.width = "100%";
       player.style.height = "100%";
