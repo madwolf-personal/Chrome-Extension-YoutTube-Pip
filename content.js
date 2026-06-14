@@ -135,11 +135,17 @@
     pipWindow.document.addEventListener("mousemove", forwardMouseEvent); 
     pipWindow.document.addEventListener("mouseup", forwardMouseEvent);
 
-    // --- Navigation & Cleanup Logic ---
+// --- Navigation & Cleanup Logic ---
 
     // 1. Define the function to close the PiP window
-    const onNavigate = () => {
-      pipWindow.close(); // Closing the window automatically triggers the 'pagehide' event below
+    const onNavigate = (event) => {
+      // YouTube passes the destination path inside the event details
+      const destinationUrl = event.detail?.url || "";
+
+      // Only kill the PiP if the destination is NOT another video
+      if (!destinationUrl.includes("/watch") && !destinationUrl.includes("/shorts")) {
+        pipWindow.close(); // Closing the window automatically triggers the 'pagehide' event below
+      }
     };
 
     // 2. Listen for YouTube's internal navigation event
@@ -150,9 +156,6 @@
       // Remove the navigation listener so it doesn't stack up
       window.removeEventListener("yt-navigate-start", onNavigate);
       
-      titleObserver.disconnect(); 
-      clearTimeout(idleTimer); 
-
       // Safely put the player back before YouTube destroys the original parent
       originalParent.appendChild(player);
       player.style.width = "100%";
